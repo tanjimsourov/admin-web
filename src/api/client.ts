@@ -1,5 +1,4 @@
-const backendOrigin = (process.env.REACT_APP_BACKEND_URL || "").replace(/\/+$/, "");
-const API_BASE = backendOrigin ? `${backendOrigin}/api` : "/api";
+import { API_BASE_URL } from "../config/backend";
 
 function getCookie(name: string): string | null {
   const value = `; ${document.cookie}`;
@@ -26,7 +25,7 @@ async function request<T>(
     headers["X-CSRFToken"] = csrfToken;
   }
 
-  const response = await fetch(`${API_BASE}${endpoint}`, {
+  const response = await fetch(`${API_BASE_URL}${endpoint}`, {
     ...options,
     headers,
     credentials: "include",
