@@ -77,13 +77,13 @@ export default function Subscriptions() {
         </div>
       )}
 
-      <div className="bg-white rounded-lg shadow overflow-hidden">
+      <div className="bg-white rounded-lg shadow overflow-x-auto">
         {loading ? (
           <div className="p-8 text-center text-slate-500">Loading...</div>
         ) : subscriptions.length === 0 ? (
           <div className="p-8 text-center text-slate-500">No subscriptions found</div>
         ) : (
-          <table className="w-full">
+          <table className="w-full min-w-[860px]">
             <thead className="bg-slate-50">
               <tr>
                 <th className="px-5 py-3 text-left text-xs font-medium text-slate-500 uppercase">
@@ -169,3 +169,5 @@ export default function Subscriptions() {
     </div>
   );
 }
+
+

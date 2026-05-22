@@ -33,7 +33,9 @@ async function request<T>(
 
   if (!response.ok) {
     const error = await response.json().catch(() => ({}));
-    throw new Error(error.detail || `Request failed: ${response.status}`);
+    const requestId = response.headers.get("X-Request-ID") || error.request_id || "";
+    const detail = error.detail || error.message || `Request failed: ${response.status}`;
+    throw new Error(requestId ? `${detail} (request ${requestId})` : detail);
   }
 
   if (response.status === 204) {
@@ -106,24 +108,78 @@ export interface PlatformUser {
   email: string;
   is_active: boolean;
   is_superuser: boolean;
+  account_status?: string | null;
+  support_agent?: boolean;
+  mfa_enabled?: boolean;
+  email_verified?: boolean;
   date_joined: string;
   last_login: string | null;
   workspace_count: number;
   site_count: number;
   order_count: number;
+  package?: string;
+  user_category?: string;
+  site_limit?: number | null;
+  contact_required?: boolean;
+}
+
+export interface PlatformUserCreatePayload {
+  email: string;
+  username?: string;
+  password?: string;
+  first_name?: string;
+  last_name?: string;
+  package?: string;
+  is_active?: boolean;
+  create_workspace?: boolean;
+}
+
+export interface PaginatedResponse<T> {
+  count: number;
+  next: string | null;
+  previous: string | null;
+  results: T[];
+}
+
+export interface PlatformAccountRequest {
+  id: number;
+  user_id: number;
+  username: string;
+  email: string;
+  user_email: string;
+  display_name: string;
+  status: string;
+  marketing_opt_in: boolean;
+  package: string;
+  user_category: string;
+  site_limit?: number | null;
+  contact_required?: boolean;
+  created_at: string;
+  updated_at: string;
+  approved_at: string | null;
+  approved_by_username: string | null;
+  rejected_at: string | null;
+  rejected_by_username: string | null;
+  rejection_reason: string;
 }
 
 export interface PlatformWorkspace {
   id: number;
   name: string;
   slug: string;
+  description?: string;
+  status?: string;
+  plan_tier?: string;
+  is_personal?: boolean;
   owner_username: string;
   owner_email: string;
   member_count: number;
   site_count: number;
   created_at: string;
-  subscription_status: string | null;
-  subscription_plan: string | null;
+  updated_at?: string;
+  subscription?: PlatformSubscription | null;
+  subscription_status?: string | null;
+  subscription_plan?: string | null;
 }
 
 export interface PlatformOrder {
@@ -167,9 +223,14 @@ export interface PlatformOffer {
   offer_type: string;
   target_plan: string;
   discount_value: string;
+  duration_in_months: number;
+  seats_delta: number;
+  cta_url: string;
   status: string;
   starts_at: string;
   ends_at: string | null;
+  created_by_username?: string | null;
+  created_at?: string;
 }
 
 export interface PlatformCampaign {
@@ -182,29 +243,115 @@ export interface PlatformCampaign {
   audience_type: string;
   status: string;
   offer: number | null;
+  offer_name?: string | null;
   recipient_count: number;
   sent_count: number;
+  last_error: string;
   sent_at: string | null;
   created_at: string;
+}
+
+export interface PlatformBillingWorkspaceSnapshot {
+  workspace_id: number;
+  workspace_slug: string;
+  workspace_name: string;
+  plan_tier: string;
+  billing_plan: string;
+  billing_status: string;
+  billing_cycle: string;
+  mrr: string;
+  seats: number;
+  limits: Record<string, number | null>;
+  usage: Record<string, number>;
+}
+
+export interface PlatformBillingSummary {
+  summary: {
+    workspace_count: number;
+    total_mrr: string;
+    lifetime_paid_revenue: string;
+    billing_status_counts: Record<string, number>;
+  };
+  results: PlatformBillingWorkspaceSnapshot[];
+}
+
+export interface PlatformIntegrationStatus {
+  summary: {
+    total: number;
+    installed: number;
+    suspended: number;
+    disabled: number;
+    error: number;
+    health_pending: number;
+    health_healthy: number;
+    health_degraded: number;
+    health_error: number;
+  };
+  results: Array<{
+    id: number;
+    app_slug: string;
+    app_name: string;
+    workspace_slug: string;
+    site_slug: string;
+    status: string;
+    health_status: string;
+    last_error: string;
+  }>;
+}
+
+export interface PlatformOperationsSummary {
+  generated_at: string;
+  window_hours: number;
+  status: string;
+  dependencies: { status?: string; checks?: Record<string, unknown> };
+  integrations: Record<string, number>;
+  jobs: Record<string, number>;
+  webhooks: Record<string, number>;
+  ai: Record<string, number | Record<string, number>>;
 }
 
 export const platformAdminApi = {
   overview: () => api.get<PlatformOverview>("/platform-admin/overview/"),
   users: (query?: string) =>
     api.get<PlatformUser[]>(`/platform-admin/users/${query ? `?q=${encodeURIComponent(query)}` : ""}`),
+  createUser: (data: PlatformUserCreatePayload) =>
+    api.post<PlatformUser>("/platform-admin/users/", data),
   workspaces: (query?: string) =>
     api.get<PlatformWorkspace[]>(`/platform-admin/workspaces/${query ? `?q=${encodeURIComponent(query)}` : ""}`),
-  activateUser: (userId: number) =>
-    api.post<{ id: number; is_active: boolean }>(`/platform-admin/users/${userId}/activate/`),
-  deactivateUser: (userId: number) =>
-    api.post<{ id: number; is_active: boolean }>(`/platform-admin/users/${userId}/deactivate/`),
+  activateUser: (userId: number, reason = "Activated from owner console") =>
+    api.post<{ id: number; is_active: boolean }>(`/platform-admin/users/${userId}/activate/`, { reason }),
+  deactivateUser: (userId: number, reason = "Suspended from owner console") =>
+    api.post<{ id: number; is_active: boolean }>(`/platform-admin/users/${userId}/deactivate/`, { reason }),
+  lockUser: (userId: number, reason = "Locked from owner console") =>
+    api.post<{ id: number; status: string }>(`/platform-admin/users/${userId}/lock/`, { reason }),
+  unlockUser: (userId: number, reason = "Unlocked from owner console") =>
+    api.post<{ id: number; status: string }>(`/platform-admin/users/${userId}/unlock/`, { reason }),
+  updateUserPackage: (userId: number, packageId: string) =>
+    api.post<PlatformUser>(`/platform-admin/users/${userId}/package/`, { package: packageId }),
+  accountRequests: (status = "pending", query?: string) => {
+    const params = new URLSearchParams();
+    if (status) params.set("status", status);
+    if (query) params.set("q", query);
+    const suffix = params.toString() ? `?${params.toString()}` : "";
+    return api.get<PaginatedResponse<PlatformAccountRequest>>(`/platform-admin/accounts/${suffix}`);
+  },
+  approveAccount: (userId: number) =>
+    api.post<{ detail: string; code: string }>(`/platform-admin/accounts/${userId}/approve/`),
+  rejectAccount: (userId: number, reason = "Rejected from owner console") =>
+    api.post<{ detail: string; code: string }>(`/platform-admin/accounts/${userId}/reject/`, { reason }),
+  billingSummary: (limit = 50) =>
+    api.get<PlatformBillingSummary>(`/platform-admin/billing/summary/?limit=${limit}`),
+  integrationStatus: () =>
+    api.get<PlatformIntegrationStatus>("/platform-admin/integrations/status/"),
+  operationsSummary: () =>
+    api.get<PlatformOperationsSummary>("/platform-admin/operations/summary/"),
 
   // Subscriptions
   subscriptions: () => api.get<PlatformSubscription[]>("/platform-subscriptions/"),
-  pauseSubscription: (id: number) =>
-    api.post<PlatformSubscription>(`/platform-subscriptions/${id}/pause/`),
-  resumeSubscription: (id: number) =>
-    api.post<PlatformSubscription>(`/platform-subscriptions/${id}/resume/`),
+  pauseSubscription: (id: number, reason = "Paused from owner console") =>
+    api.post<PlatformSubscription>(`/platform-subscriptions/${id}/pause/`, { reason }),
+  resumeSubscription: (id: number, reason = "Resumed from owner console") =>
+    api.post<PlatformSubscription>(`/platform-subscriptions/${id}/resume/`, { reason }),
 
   // Offers
   offers: () => api.get<PlatformOffer[]>("/platform-offers/"),

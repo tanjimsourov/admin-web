@@ -5,6 +5,7 @@ import Layout from "./components/Layout";
 import LoginPage from "./components/LoginPage";
 import Dashboard from "./pages/Dashboard";
 import Users from "./pages/Users";
+import AccountRequests from "./pages/AccountRequests";
 import Workspaces from "./pages/Workspaces";
 import Subscriptions from "./pages/Subscriptions";
 import Offers from "./pages/Offers";
@@ -67,6 +68,7 @@ function AppRoutes() {
       >
         <Route index element={<Dashboard />} />
         <Route path="users" element={<Users />} />
+        <Route path="account-requests" element={<AccountRequests />} />
         <Route path="workspaces" element={<Workspaces />} />
         <Route path="subscriptions" element={<Subscriptions />} />
         <Route path="offers" element={<Offers />} />

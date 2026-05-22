@@ -80,13 +80,13 @@ export default function Workspaces() {
         </div>
       )}
 
-      <div className="bg-white rounded-lg shadow overflow-hidden">
+      <div className="bg-white rounded-lg shadow overflow-x-auto">
         {loading ? (
           <div className="p-8 text-center text-slate-500">Loading...</div>
         ) : workspaces.length === 0 ? (
           <div className="p-8 text-center text-slate-500">No workspaces found</div>
         ) : (
-          <table className="w-full">
+          <table className="w-full min-w-[860px]">
             <thead className="bg-slate-50">
               <tr>
                 <th className="px-5 py-3 text-left text-xs font-medium text-slate-500 uppercase">
@@ -110,51 +110,68 @@ export default function Workspaces() {
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100">
-              {workspaces.map((ws) => (
-                <tr key={ws.id}>
-                  <td className="px-5 py-4">
-                    <div>
-                      <p className="font-medium text-slate-900">{ws.name}</p>
-                      <p className="text-sm text-slate-500">{ws.slug}</p>
-                    </div>
-                  </td>
-                  <td className="px-5 py-4">
-                    <div>
-                      <p className="text-sm text-slate-900">{ws.owner_username}</p>
-                      <p className="text-xs text-slate-500">{ws.owner_email}</p>
-                    </div>
-                  </td>
-                  <td className="px-5 py-4 text-sm text-slate-600">
-                    {ws.member_count}
-                  </td>
-                  <td className="px-5 py-4 text-sm text-slate-600">
-                    {ws.site_count}
-                  </td>
-                  <td className="px-5 py-4">
-                    {ws.subscription_status ? (
+              {workspaces.map((ws) => {
+                const subscriptionStatus = ws.subscription?.status || ws.subscription_status || null;
+                const subscriptionPlan = ws.subscription?.plan || ws.subscription_plan || ws.plan_tier || null;
+
+                return (
+                  <tr key={ws.id}>
+                    <td className="px-5 py-4">
                       <div>
-                        <span
-                          className={`text-xs px-2 py-1 rounded-full ${getStatusColor(
-                            ws.subscription_status
-                          )}`}
-                        >
-                          {ws.subscription_status}
-                        </span>
-                        {ws.subscription_plan && (
-                          <p className="text-xs text-slate-500 mt-1">
-                            {ws.subscription_plan}
-                          </p>
-                        )}
+                        <p className="font-medium text-slate-900">{ws.name}</p>
+                        <p className="text-sm text-slate-500">{ws.slug}</p>
+                        <div className="mt-1 flex flex-wrap gap-1.5">
+                          {ws.status && (
+                            <span className="rounded-full bg-slate-100 px-2 py-0.5 text-xs text-slate-600">
+                              {ws.status.replace(/_/g, " ")}
+                            </span>
+                          )}
+                          {ws.plan_tier && (
+                            <span className="rounded-full bg-indigo-50 px-2 py-0.5 text-xs text-indigo-700">
+                              {ws.plan_tier.replace(/_/g, " ")}
+                            </span>
+                          )}
+                        </div>
                       </div>
-                    ) : (
-                      <span className="text-xs text-slate-400">No subscription</span>
-                    )}
-                  </td>
-                  <td className="px-5 py-4 text-sm text-slate-600">
-                    {new Date(ws.created_at).toLocaleDateString()}
-                  </td>
-                </tr>
-              ))}
+                    </td>
+                    <td className="px-5 py-4">
+                      <div>
+                        <p className="text-sm text-slate-900">{ws.owner_username}</p>
+                        <p className="text-xs text-slate-500">{ws.owner_email}</p>
+                      </div>
+                    </td>
+                    <td className="px-5 py-4 text-sm text-slate-600">
+                      {ws.member_count}
+                    </td>
+                    <td className="px-5 py-4 text-sm text-slate-600">
+                      {ws.site_count}
+                    </td>
+                    <td className="px-5 py-4">
+                      {subscriptionStatus ? (
+                        <div>
+                          <span
+                            className={`text-xs px-2 py-1 rounded-full ${getStatusColor(
+                              subscriptionStatus
+                            )}`}
+                          >
+                            {subscriptionStatus}
+                          </span>
+                          {subscriptionPlan && (
+                            <p className="text-xs text-slate-500 mt-1">
+                              {subscriptionPlan}
+                            </p>
+                          )}
+                        </div>
+                      ) : (
+                        <span className="text-xs text-slate-400">No subscription</span>
+                      )}
+                    </td>
+                    <td className="px-5 py-4 text-sm text-slate-600">
+                      {new Date(ws.created_at).toLocaleDateString()}
+                    </td>
+                  </tr>
+                );
+              })}
             </tbody>
           </table>
         )}
@@ -162,3 +179,5 @@ export default function Workspaces() {
     </div>
   );
 }
+
+

@@ -53,9 +53,9 @@ export default function LoginPage() {
             </svg>
           </div>
           <h1 className="text-3xl font-bold text-white mb-2">
-            Platform Admin
+            Owner Console
           </h1>
-          <p className="text-indigo-200 text-sm">Secure access to platform management</p>
+          <p className="text-indigo-200 text-sm">Manage all users, workspaces, billing, and platform activity</p>
         </div>
 
         <form
@@ -192,7 +192,7 @@ export default function LoginPage() {
         </form>
 
         <p className="text-xs text-indigo-300 text-center mt-6">
-          Only platform administrators can access this area.
+          Owner administrators only. Client users sign in from the public frontend.
         </p>
       </div>
     </div>
